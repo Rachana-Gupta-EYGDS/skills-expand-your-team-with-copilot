@@ -472,6 +472,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
@@ -498,6 +505,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    
+    // Escape user-controlled data for safe insertion into HTML attributes
+    const safeName = escapeHtml(name);
+    const safeDescription = escapeHtml(details.description);
+    const safeSchedule = escapeHtml(formattedSchedule);
 
     // Create activity tag
     const tagHtml = `
@@ -528,6 +540,21 @@ document.addEventListener("DOMContentLoaded", () => {
         <span class="tooltip-text">Regular meetings at this time throughout the semester</span>
       </p>
       ${capacityIndicator}
+      <div class="social-sharing">
+        <span class="share-label">Share:</span>
+        <button class="share-button share-twitter" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share on Twitter">
+          <span class="share-icon">𝕏</span>
+        </button>
+        <button class="share-button share-facebook" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share on Facebook">
+          <span class="share-icon">f</span>
+        </button>
+        <button class="share-button share-email" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share via Email">
+          <span class="share-icon">✉</span>
+        </button>
+        <button class="share-button share-copy" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Copy Link">
+          <span class="share-icon">🔗</span>
+        </button>
+      </div>
       <div class="participants-list">
         <h5>Current Participants:</h5>
         <ul>
@@ -586,6 +613,26 @@ document.addEventListener("DOMContentLoaded", () => {
         });
       }
     }
+
+    // Add click handlers for social sharing buttons
+    const shareButtons = activityCard.querySelectorAll(".share-button");
+    shareButtons.forEach((button) => {
+      button.addEventListener("click", (e) => {
+        const activityName = e.currentTarget.dataset.activity;
+        const description = e.currentTarget.dataset.description;
+        const schedule = e.currentTarget.dataset.schedule;
+        
+        if (e.currentTarget.classList.contains("share-twitter")) {
+          shareOnTwitter(activityName, description, schedule);
+        } else if (e.currentTarget.classList.contains("share-facebook")) {
+          shareOnFacebook(activityName, description, schedule);
+        } else if (e.currentTarget.classList.contains("share-email")) {
+          shareViaEmail(activityName, description, schedule);
+        } else if (e.currentTarget.classList.contains("share-copy")) {
+          copyShareLink(activityName, description, schedule);
+        }
+      });
+    });
 
     activitiesList.appendChild(activityCard);
   }
@@ -854,6 +901,67 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("Error signing up:", error);
     }
   });
+
+  // Social sharing functions
+  function shareOnTwitter(activityName, description, schedule) {
+    const currentUrl = window.location.href;
+    const text = `Check out ${activityName} at Mergington High School! ${description} Schedule: ${schedule}`;
+    const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
+    window.open(twitterUrl, '_blank', 'width=550,height=420');
+  }
+
+  function shareOnFacebook(activityName, description, schedule) {
+    const currentUrl = window.location.href;
+    const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+    window.open(facebookUrl, '_blank', 'width=550,height=420');
+  }
+
+  function shareViaEmail(activityName, description, schedule) {
+    const currentUrl = window.location.href;
+    const subject = `Check out ${activityName} at Mergington High School`;
+    const body = `Hi,\n\nI wanted to share this great activity with you:\n\n${activityName}\n${description}\n\nSchedule: ${schedule}\n\nLearn more: ${currentUrl}`;
+    const mailtoUrl = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    window.location.href = mailtoUrl;
+  }
+
+  function copyShareLink(activityName, description, schedule) {
+    const currentUrl = window.location.href;
+    const shareText = `${activityName} - ${description}\nSchedule: ${schedule}\n${currentUrl}`;
+    
+    // Try to use the Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(shareText).then(() => {
+        showMessage("Link copied to clipboard!", "success");
+      }).catch((err) => {
+        console.error("Failed to copy:", err);
+        fallbackCopyToClipboard(shareText);
+      });
+    } else {
+      fallbackCopyToClipboard(shareText);
+    }
+  }
+
+  function fallbackCopyToClipboard(text) {
+    // Fallback for older browsers that don't support the Clipboard API
+    // Note: document.execCommand('copy') is deprecated but necessary for legacy browser support
+    const textArea = document.createElement("textarea");
+    textArea.value = text;
+    textArea.style.position = "fixed";
+    textArea.style.left = "-999999px";
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+      document.execCommand('copy');
+      showMessage("Link copied to clipboard!", "success");
+    } catch (err) {
+      console.error("Failed to copy:", err);
+      showMessage("Failed to copy link. Please copy manually.", "error");
+    }
+    
+    document.body.removeChild(textArea);
+  }
 
   // Expose filter functions to window for future UI control
   window.activityFilters = {
