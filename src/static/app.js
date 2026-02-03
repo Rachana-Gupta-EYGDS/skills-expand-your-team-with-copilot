@@ -472,6 +472,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // Helper function to escape HTML to prevent XSS
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   // Function to render a single activity card
   function renderActivityCard(name, details) {
     const activityCard = document.createElement("div");
@@ -498,6 +505,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Format the schedule using the new helper function
     const formattedSchedule = formatSchedule(details);
+    
+    // Escape user-controlled data for safe insertion into HTML attributes
+    const safeName = escapeHtml(name);
+    const safeDescription = escapeHtml(details.description);
+    const safeSchedule = escapeHtml(formattedSchedule);
 
     // Create activity tag
     const tagHtml = `
@@ -530,16 +542,16 @@ document.addEventListener("DOMContentLoaded", () => {
       ${capacityIndicator}
       <div class="social-sharing">
         <span class="share-label">Share:</span>
-        <button class="share-button share-twitter" data-activity="${name}" data-description="${details.description}" data-schedule="${formattedSchedule}" title="Share on Twitter">
+        <button class="share-button share-twitter" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share on Twitter">
           <span class="share-icon">𝕏</span>
         </button>
-        <button class="share-button share-facebook" data-activity="${name}" data-description="${details.description}" data-schedule="${formattedSchedule}" title="Share on Facebook">
+        <button class="share-button share-facebook" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share on Facebook">
           <span class="share-icon">f</span>
         </button>
-        <button class="share-button share-email" data-activity="${name}" data-description="${details.description}" data-schedule="${formattedSchedule}" title="Share via Email">
+        <button class="share-button share-email" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Share via Email">
           <span class="share-icon">✉</span>
         </button>
-        <button class="share-button share-copy" data-activity="${name}" data-description="${details.description}" data-schedule="${formattedSchedule}" title="Copy Link">
+        <button class="share-button share-copy" data-activity="${safeName}" data-description="${safeDescription}" data-schedule="${safeSchedule}" title="Copy Link">
           <span class="share-icon">🔗</span>
         </button>
       </div>
@@ -894,7 +906,7 @@ document.addEventListener("DOMContentLoaded", () => {
   function shareOnTwitter(activityName, description, schedule) {
     const currentUrl = window.location.href;
     const text = `Check out ${activityName} at Mergington High School! ${description} Schedule: ${schedule}`;
-    const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
+    const twitterUrl = `https://x.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(currentUrl)}`;
     window.open(twitterUrl, '_blank', 'width=550,height=420');
   }
 
@@ -930,7 +942,8 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function fallbackCopyToClipboard(text) {
-    // Fallback for older browsers
+    // Fallback for older browsers that don't support the Clipboard API
+    // Note: document.execCommand('copy') is deprecated but necessary for legacy browser support
     const textArea = document.createElement("textarea");
     textArea.value = text;
     textArea.style.position = "fixed";
